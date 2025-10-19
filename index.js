@@ -45,6 +45,23 @@ const SessionSchema = new mongoose.Schema({
     sessionData: Object
 });
 const Session = mongoose.model('Session', SessionSchema);
+async function sendMessageToAPI(messageData) {
+    if (!API_BASE_URL) return;
+
+    try {
+        await axios.post(`${API_BASE_URL}${process.env.API_WEBHOOK_MESSAGE || '/webhook/message'}`, {
+            sessionId: SESSION_ID,
+            ...messageData,
+            timestamp: new Date().toISOString()
+        }, {
+            timeout: 10000
+        });
+
+        console.log('💬 تم إرسال رسالة للـ API');
+    } catch (error) {
+        console.error('❌ خطأ في إرسال الرسالة للـ API:', error.message);
+    }
+}
 
 async function loadSession() {
     const doc = await Session.findOne({ sessionId: SESSION_ID });
@@ -167,9 +184,9 @@ function startStatusUpdates() {
         clientInfo = null;
         currentQR = null;
     });
-
-    client.on('message', msg => {
-        if (msg.body.toLowerCase() === 'ping') msg.reply('pong');
+    client.on('message', async msg => {
+        console.log('💬 New message received:', msg);
+        await sendMessageToAPI(msg);
     });
 
     client.initialize();
